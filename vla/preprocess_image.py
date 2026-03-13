@@ -111,7 +111,7 @@ def load_rgb_image(image_path: Path) -> Image.Image:
 
 def resize_image(image: Image.Image, width: int, height: int) -> Image.Image:
     # Bilinear 对 Day 3 足够温和，既简单又常见。
-    return image.resize((width, height), Image.BILINEAR)
+    return image.resize((width, height), Image.Resampling.BILINEAR)
 
 
 def normalize_image(image: Image.Image, normalize_mode: str) -> np.ndarray:

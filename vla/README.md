@@ -25,30 +25,36 @@
 
 ## 建议用法
 
+先进入项目根目录：
+
+```bash
+cd /root/workspace/6-AxisRobotArm-VLA
+```
+
 先激活虚拟环境：
 
 ```bash
-source /root/workspace/6-AxisRobotArm/vla/.venv/bin/activate
+source vla/.venv/bin/activate
 ```
 
 如果后续需要和 ROS 2 节点交互，再额外 source：
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source /root/workspace/6-AxisRobotArm/install/setup.bash
+source install/setup.bash
 ```
 
 运行环境自检：
 
 ```bash
-python /root/workspace/6-AxisRobotArm/vla/check_env.py
+python3 vla/check_env.py
 ```
 
 运行单图预处理：
 
 ```bash
-python /root/workspace/6-AxisRobotArm/vla/preprocess_image.py \
-  --input /root/workspace/6-AxisRobotArm/vla/data/raw/sample_01.png \
+python3 vla/preprocess_image.py \
+  --input vla/data/raw/sample_01.png \
   --stem sample_01
 ```
 
