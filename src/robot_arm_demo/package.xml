@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!--
+  package.xml
+
+  ROS2 软件包清单文件。
+-->
+<package format="3">
+  <name>robot_arm_demo</name>
+  <version>0.0.0</version>
+  <description>6-Axis robotic arm demo with FK/IK using Eigen</description>
+  <maintainer email="cen@example.com">cen</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>joint_state_publisher_gui</depend>
+  <depend>rviz2</depend>
+  <depend>ros_gz_sim</depend>
+  <depend>gz_ros2_control</depend>
+  <depend>joint_state_broadcaster</depend>
+  <depend>joint_trajectory_controller</depend>
+  <depend>moveit_msgs</depend>
+  <depend>shape_msgs</depend>
+  
+  <exec_depend>eigen3_cmake_module</exec_depend>
+  <build_depend>eigen</build_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,24 @@
+# ROS2 colcon 编译生成
+build/
+install/
+log/
+compile_commands.json
+
+# Python
+__pycache__/
+*.pyc
+vla/.venv/
+vla/.cache/
+vla/data/processed/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+*~
+
+.AGENTS.md
+.Plan.md
+.cache/

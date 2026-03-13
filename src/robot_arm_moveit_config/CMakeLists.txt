@@ -1,0 +1,16 @@
+# CMakeLists.txt
+#
+# MoveIt2 配置包的 CMake 构建文件。
+
+cmake_minimum_required(VERSION 3.8)
+project(robot_arm_moveit_config)
+
+find_package(ament_cmake REQUIRED)
+
+install(DIRECTORY
+  config
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+ament_package()
