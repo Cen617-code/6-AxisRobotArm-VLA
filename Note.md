@@ -177,3 +177,87 @@ python3 vla/check_env.py
   - 不再直接返回裸字典
   - 设计更稳定的 `ActionChunk`
   - 统一字段类型、默认值和输出方式
+
+## 2026-03-14
+
+### 今日新增进度
+
+- 完成 `Day 5`：统一动作输出格式。
+- 已在 `vla/infer_once.py` 中建立 `fake_infer -> build_action_chunk -> ActionChunk -> JSON` 的离线输出链路。
+- 已生成一份示例输出文件：`vla/result.json`。
+
+### 今天实际打通的能力
+
+- `fake_infer(...)` 现在只负责返回原始动作建议，不再直接拼完整输出协议。
+- `ActionChunk` 已固定核心字段：
+  - `delta_xyz[3]`
+  - `delta_rpy[3]`
+  - `confidence`
+  - `terminate`
+- `build_action_chunk(...)` 已能把原始动作结果包装成统一结构，并补充：
+  - `timestamp`
+  - `metadata`
+  - 单位信息
+- `to_dict()` 已能把统一动作结构稳定序列化成 JSON。
+- 命令行运行时，过程日志与最终 JSON 已完成分流：
+  - 日志走 `stderr`
+  - 正式结果走 `stdout`
+
+### 今日解决的问题
+
+#### 问题 4：过程日志污染 JSON 输出
+
+**现象**
+
+- 运行推理脚本后虽然能看到 JSON 结果。
+- 但如果直接用 `>` 重定向到文件，文件里会混入：
+  - `步骤1：解析命令行参数`
+  - `图片加载成功`
+  - `动作协议检查：验证通过`
+
+**根因**
+
+- Python 的 `print(...)` 默认写到 `stdout`。
+- 之前脚本把“过程日志”和“最终结果”都写到了同一条输出通道。
+
+**修复方式**
+
+- 增加 `log(message)`，统一把过程日志打印到 `stderr`。
+- 保留最终 `json.dumps(...)` 输出到 `stdout`。
+
+**修复后验证方式**
+
+```bash
+python3 vla/infer_once.py \
+  --input vla/data/raw/sample_01.png \
+  --instruction "move left a little" \
+  > vla/result.json
+```
+
+**修复后结果**
+
+- 终端中仍可看到步骤日志。
+- `vla/result.json` 中只保留纯 JSON，不再混入调试信息。
+
+### 今天学到的关键理解
+
+- `fake_infer` 更像“大脑的第一反应”，只负责给出原始动作建议。
+- `ActionChunk` 更像“发给机械臂执行层的正式工单”，字段必须固定、稳定。
+- `stdout` 不等于“所有要打印的东西”。
+- 更合理的工程分工是：
+  - `stdout` 放正式结果
+  - `stderr` 放调试日志和过程信息
+- `Day 5` 的重点不是让模型更强，而是让输出协议更稳定，方便后续接 ROS 2 和 MoveIt。
+
+### 当前结论
+
+- 已完成 `Day 5` 的目标与验收要求。
+- 当前已经具备进入 `Day 6` 的条件。
+- 现阶段最重要的成果是：离线动作结果已经有了稳定、可保存、可复用的统一格式。
+
+### 下一步计划
+
+- 进入 `Day 6`：
+  - 让 Python 推理节点以 ROS 2 节点方式运行
+  - 先读取固定任务文本和离线图片
+  - 发布 `/vla/action_delta`
