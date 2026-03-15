@@ -261,3 +261,145 @@ python3 vla/infer_once.py \
   - 让 Python 推理节点以 ROS 2 节点方式运行
   - 先读取固定任务文本和离线图片
   - 发布 `/vla/action_delta`
+
+## 2026-03-15
+
+### 今日新增进度
+
+- 完成 `Day 6`：把教学版推理壳包装成 ROS 2 Python 节点。
+- 已新增 `vla/vla_action_node.py`，打通：
+  - 订阅 `/vla/task_text`
+  - 调用 `infer_once.py` 内部推理逻辑
+  - 发布 `/vla/action_delta`
+  - 单次任务完成后自动退出
+
+### 今天实际打通的能力
+
+- `vla_action_node.py` 启动时会加载固定图片，并在日志中打印当前图片路径。
+- 节点收到一条 `/vla/task_text` 后，会执行一次：
+  - `fake_infer(...)`
+  - `build_action_chunk(...)`
+  - `ActionChunk -> TwistStamped`
+- `/vla/action_delta`
+  - 类型：`geometry_msgs/msg/TwistStamped`
+  - `linear.x/y/z` 对应 `delta_xyz`
+  - `angular.x/y/z` 对应 `delta_rpy`
+- `confidence` 与 `terminate` 当前阶段先只打印日志，不进入控制消息。
+- 节点在发布一次动作后，会延时退出，避免消息刚发出就把 ROS 上下文关掉。
+
+### 今日解决的问题
+
+#### 问题 5：把命令行入口和 ROS 话题入口混在一起
+
+**现象**
+
+- 节点已经订阅了 `/vla/task_text`
+- 但回调里仍试图调用 `parse_args()`
+- 或把 `msg.data` 当成带字段对象访问
+
+**根因**
+
+- `infer_once.py` 原本是离线脚本，入口是命令行参数。
+- 接到 ROS 之后，真正的指令来源已经变成了 `std_msgs/msg/String` 的 `msg.data`。
+
+**修复方式**
+
+- 回调函数统一直接使用 `msg.data` 作为任务文本。
+- 不再在 ROS 回调里调用 `parse_args()`。
+
+#### 问题 6：单次发布后立即退出，`ros2 topic echo` 偶尔看不到消息
+
+**现象**
+
+- 节点日志里已经打印“已发布 `/vla/action_delta`”
+- 但 `ros2 topic echo /vla/action_delta` 有时来不及看到数据
+
+**根因**
+
+- DDS 通信需要一个极短的发现和发送窗口。
+- 如果节点在 `publish()` 后立刻 `shutdown()`，就像“话刚说出口就切断对讲机电源”。
+
+**修复方式**
+
+- 增加短暂延时退出逻辑。
+- 用一次性的退出定时器在发布后再关闭 ROS 上下文。
+- 同时处理 `ExternalShutdownException`，让正常退出不再表现成异常。
+
+#### 问题 7：固定图片路径容易因为工作目录不同而失效
+
+**现象**
+
+- 相同脚本在不同启动目录下，可能找不到测试图片。
+
+**根因**
+
+- 相对路径依赖当前 shell 工作目录，不够稳。
+
+**修复方式**
+
+- 在 `vla_action_node.py` 中基于脚本所在目录推导默认图片路径。
+- 同时暴露 ROS 参数 `image_path`，后续更换测试图片时不必修改源码。
+
+### 今天学到的关键理解
+
+- `infer_once.py` 可以看作“发动机”：
+  - 负责图片输入
+  - 负责任务文本理解
+  - 负责返回统一 `ActionChunk`
+- `vla_action_node.py` 可以看作“ROS 包装层”：
+  - 不重新发明推理逻辑
+  - 只负责接收话题、调用推理、发送动作消息
+- `ActionChunk` 是项目内部标准件。
+- `TwistStamped` 是当前 Day 6 阶段给 ROS 下游传动作的运输箱。
+- 先让节点稳定地“听懂一句话、发出一张动作纸条”，比一开始就接机械臂执行更稳。
+
+### 今日验收命令
+
+启动节点：
+
+```bash
+cd /root/workspace/6-AxisRobotArm-VLA
+source /opt/ros/jazzy/setup.bash
+source vla/.venv/bin/activate
+python3 vla/vla_action_node.py
+```
+
+监听动作输出：
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 topic echo /vla/action_delta geometry_msgs/msg/TwistStamped --once
+```
+
+发送任务文本：
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 topic pub --once /vla/task_text std_msgs/msg/String "{data: 'move right'}"
+```
+
+**本次验证结果**
+
+- 节点成功收到 `move right`
+- 日志打印：
+  - `confidence: 0.8`
+  - `terminate: False`
+- `/vla/action_delta` 成功输出：
+  - `linear.y = 0.01`
+  - 其他线速度与角速度为 `0.0`
+
+### 当前结论
+
+- 已完成 `Day 6` 目标与验收要求。
+- 当前已经具备进入 `Day 7` 的条件。
+- 现阶段最重要的成果是：
+  - VLA 推理壳已经可以作为 ROS 2 节点工作
+  - 动作结果已经能通过标准 ROS 消息向下游发布
+
+### 下一步计划
+
+- 进入 `Day 7`：
+  - 读取 `/end_effector_pose`
+  - 将 `delta_xyz` 累加成绝对目标位姿
+  - 增加单步位移裁剪与工作空间边界限制
+  - 发布 `/vla/goal_pose`
