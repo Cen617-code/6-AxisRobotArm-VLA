@@ -19,7 +19,7 @@
 ## 项目结构
 
 ```
-RobotStudy/
+6-AxisRobotArm-VLA/
 ├── README.md               # 本文件
 ├── Note.md                 # 知识点 + 问题记录
 ├── Plan.md                 # 学习计划
@@ -81,7 +81,7 @@ sudo apt install ros-jazzy-xacro
 ### 3. 克隆与编译
 
 ```bash
-cd ~/RobotStudy
+cd /home/cen123/workspace/6-AxisRobotArm-VLA
 colcon build
 source install/setup.bash
 ```
@@ -91,7 +91,7 @@ source install/setup.bash
 ### A. RViz 可视化（仅查看模型）
 
 ```bash
-source ~/RobotStudy/install/setup.bash
+source /home/cen123/workspace/6-AxisRobotArm-VLA/install/setup.bash
 ros2 launch robot_arm_demo display.launch.py
 ```
 
@@ -100,12 +100,12 @@ ros2 launch robot_arm_demo display.launch.py
 ```bash
 # 终端 1 — 启动物理仿真
 ros2 daemon stop && killall -9 gz ruby 2>/dev/null; sleep 1
-source ~/RobotStudy/install/setup.bash
+source /home/cen123/workspace/6-AxisRobotArm-VLA/install/setup.bash
 ros2 launch robot_arm_demo gazebo.launch.py
 # 等待 "Successfully loaded controller arm_controller into state active"
 
 # 终端 2 — 启动 MoveIt + RViz
-source ~/RobotStudy/install/setup.bash
+source /home/cen123/workspace/6-AxisRobotArm-VLA/install/setup.bash
 ros2 launch robot_arm_moveit_config moveit_rviz.launch.py
 # 等待 "You can start planning now!"
 # 在 RViz 中：Fixed Frame → world，Add → RobotModel + MotionPlanning
@@ -116,7 +116,7 @@ ros2 launch robot_arm_moveit_config moveit_rviz.launch.py
 
 ```bash
 # 终端 3（Gazebo + MoveIt 运行中）
-source ~/RobotStudy/install/setup.bash
+source /home/cen123/workspace/6-AxisRobotArm-VLA/install/setup.bash
 ros2 run robot_arm_demo add_obstacles
 # 在 RViz 中会出现 3 个障碍物，MoveIt 规划时自动绕开
 ```

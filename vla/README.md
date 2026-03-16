@@ -40,7 +40,7 @@
 先进入项目根目录：
 
 ```bash
-cd /root/workspace/6-AxisRobotArm-VLA
+cd /home/cen123/workspace/6-AxisRobotArm-VLA
 ```
 
 先激活虚拟环境：
@@ -83,7 +83,7 @@ python3 vla/infer_once.py \
 终端 1：启动 ROS 2 推理节点
 
 ```bash
-cd /root/workspace/6-AxisRobotArm-VLA
+cd /home/cen123/workspace/6-AxisRobotArm-VLA
 source /opt/ros/jazzy/setup.bash
 source vla/.venv/bin/activate
 python3 vla/vla_action_node.py

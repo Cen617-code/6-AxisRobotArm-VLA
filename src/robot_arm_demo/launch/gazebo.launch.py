@@ -5,13 +5,17 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, IncludeLaunchDescription, RegisterEventHandler, TimerAction
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, RegisterEventHandler, TimerAction
+from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
+from launch.substitutions import LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import xacro
 
 def generate_launch_description():
+    gui = LaunchConfiguration('gui')
+
     pkg_share = get_package_share_directory('robot_arm_demo')
     
     # 处理URDF文件
@@ -91,10 +95,16 @@ def generate_launch_description():
     # 延迟5秒启动GUI，确保物理引擎和控制器先就绪
     delayed_gui = TimerAction(
         period=5.0,
-        actions=[gazebo_gui]
+        actions=[gazebo_gui],
+        condition=IfCondition(gui)
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'gui',
+            default_value='true',
+            description='Whether to start the Gazebo GUI client.'
+        ),
         gazebo_server,
         spawn_entity,
         delayed_robot_state_publisher,

@@ -45,7 +45,7 @@
 
 **修复方式**
 
-- 修改了 [gazebo.launch.py](/root/workspace/6-AxisRobotArm/src/robot_arm_demo/launch/gazebo.launch.py)，不再依赖 `-topic /robot_description`。
+- 修改了 [gazebo.launch.py](/home/cen123/workspace/6-AxisRobotArm-VLA/src/robot_arm_demo/launch/gazebo.launch.py)，不再依赖 `-topic /robot_description`。
 - 改为直接把 `xacro` 生成出的 URDF 字符串传给 `ros_gz_sim create` 的 `-string` 参数。
 
 **修复后验证信号**
@@ -119,19 +119,19 @@
 **根因**
 
 - `vla/README.md` 里还保留着旧项目目录 `/root/workspace/6-AxisRobotArm` 的绝对路径。
-- 当前真实项目目录已经变成 `/root/workspace/6-AxisRobotArm-VLA`。
+- 当前真实项目目录已经变成 `/home/cen123/workspace/6-AxisRobotArm-VLA`。
 
 **修复方式**
 
 - 更新了 `vla/README.md` 中的默认命令：
-  - 先 `cd /root/workspace/6-AxisRobotArm-VLA`
+  - 先 `cd /home/cen123/workspace/6-AxisRobotArm-VLA`
   - 再 `source vla/.venv/bin/activate`
   - 使用相对路径运行脚本
 
 **修复后正确用法**
 
 ```bash
-cd /root/workspace/6-AxisRobotArm-VLA
+cd /home/cen123/workspace/6-AxisRobotArm-VLA
 source vla/.venv/bin/activate
 python3 vla/check_env.py
 ```
@@ -358,7 +358,7 @@ python3 vla/infer_once.py \
 启动节点：
 
 ```bash
-cd /root/workspace/6-AxisRobotArm-VLA
+cd /home/cen123/workspace/6-AxisRobotArm-VLA
 source /opt/ros/jazzy/setup.bash
 source vla/.venv/bin/activate
 python3 vla/vla_action_node.py
@@ -403,3 +403,156 @@ ros2 topic pub --once /vla/task_text std_msgs/msg/String "{data: 'move right'}"
   - 将 `delta_xyz` 累加成绝对目标位姿
   - 增加单步位移裁剪与工作空间边界限制
   - 发布 `/vla/goal_pose`
+
+## 2026-03-16
+
+### 今日新增进度
+
+- 完成 `Day 7`：将动作增量映射为安全目标位姿。
+- 已新增 `vla/action_mapper_node.py`，打通：
+  - 订阅 `/end_effector_pose`
+  - 订阅 `/vla/action_delta`
+  - 发布 `/vla/goal_pose`
+- 已完成两层安全保护：
+  - 单步位移裁剪
+  - 工作空间边界限制
+
+### 今天实际打通的能力
+
+- `action_mapper_node.py` 可以缓存当前末端位姿。
+- 收到 `TwistStamped` 动作增量后，可以将：
+  - `current_pose.position`
+  - 加上 `delta_xyz`
+  - 生成新的 `PoseStamped goal_pose`
+- 当前阶段姿态保持不变，直接沿用当前末端姿态。
+- 已加入单步位移限幅：
+  - 默认最大步长为 `0.02 m`
+  - 超过时按三维向量长度等比例缩放
+- 已加入工作空间边界限制：
+  - `x`: `[0.05, 0.75]`
+  - `y`: `[-0.45, 0.45]`
+  - `z`: `[0.05, 0.80]`
+- 已验证 `/vla/goal_pose` 能正确发布。
+
+### 今日解决的问题
+
+#### 问题 8：`colcon build` 仍然引用旧工程路径
+
+**现象**
+
+- 在当前仓库执行 `colcon build` 时出现：
+  - `CMakeCache.txt directory ... is different than ... where CMakeCache.txt was created`
+  - `The source directory "/root/workspace/6-AxisRobotArm/src/robot_arm_demo" does not exist`
+
+**根因**
+
+- `build/` 中的 `CMakeCache.txt` 仍然记录旧项目 `/root/workspace/6-AxisRobotArm` 的绝对路径。
+
+**处理方式**
+
+- 清理旧构建产物：
+  - `build/`
+  - `install/`
+  - `log/`
+- 重新在当前目录编译，让 CMake 用新路径生成缓存。
+
+#### 问题 9：`~/.bashrc` 自动 source 旧工作区
+
+**现象**
+
+- 打开新终端后，环境里仍尝试加载旧工作区：
+  - `/home/cen123/workspace/6-AxisRobotArm/install/setup.bash`
+- 导致终端报旧路径相关错误。
+
+**根因**
+
+- `~/.bashrc` 末尾残留旧工作区的自动 `source`。
+
+**处理方式**
+
+- 将 `~/.bashrc` 中的自动加载路径改为当前工作区：
+  - `/home/cen123/workspace/6-AxisRobotArm-VLA/install/setup.bash`
+- 并增加文件存在性判断，避免路径失效时一开终端就报错。
+
+#### 问题 10：Gazebo 启动时总会弹出 GUI
+
+**现象**
+
+- 仅想提供 `/joint_states` 给 Day 7 验证时，Gazebo 仍会自动拉起图形界面。
+
+**根因**
+
+- `gazebo.launch.py` 中将 GUI 客户端写死为延迟启动，没有提供开关参数。
+
+**处理方式**
+
+- 给 `gazebo.launch.py` 增加 `gui` 启动参数。
+- 当前支持：
+
+```bash
+ros2 launch robot_arm_demo gazebo.launch.py gui:=false
+```
+
+#### 问题 11：`action_mapper_node.py` 启动后一直提示未收到 `/end_effector_pose`
+
+**现象**
+
+- `action_mapper_node.py` 能启动。
+- 但收到动作后只打印：
+  - `尚未收到 /end_effector_pose，暂不处理动作增量`
+
+**根因**
+
+- 上游 `/joint_states` 尚未确认连通。
+- 没有 `/joint_states`，`kinematics_solver` 就无法计算并发布 `/end_effector_pose`。
+
+**处理方式**
+
+- 先验证 `/joint_states`
+- 再验证 `/end_effector_pose`
+- 确认 Gazebo + 控制器链路和 `kinematics_solver` 同时在线后，问题消失。
+
+### 今天学到的关键理解
+
+- `joint_states` 是整条链的底层状态输入。
+- `end_effector_pose` 是根据关节状态算出来的当前“手的位置”。
+- `goal_pose` 不是机械臂的真实当前位置，而是下一步希望到达的位置。
+- Day 7 验证的是：
+  - `action_delta -> goal_pose`
+- 不是：
+  - `goal_pose -> 机械臂真的运动`
+- 也就是说，今天完成的是“安全翻译层”，还不是“执行层”。
+- 单步裁剪解决的是“每一步不能走太猛”。
+- 工作空间边界解决的是“目标点不能越出安全区域”。
+- 先裁剪 `delta`，再生成 `goal_pose`，逻辑上更自然。
+
+### 今日验收结果
+
+- `/joint_states` 已有数据。
+- `/end_effector_pose` 已有数据，且 `frame_id = base_link`。
+- 手工发送：
+
+```bash
+ros2 topic pub --once /vla/action_delta geometry_msgs/msg/TwistStamped "{header: {frame_id: 'base_link'}, twist: {linear: {x: 0.01, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}"
+```
+
+- `/vla/goal_pose` 成功输出：
+  - `x` 由约 `0.4000` 变为约 `0.4100`
+  - `y` 与 `z` 基本保持不变
+  - 姿态保持当前姿态
+
+### 当前结论
+
+- 已完成 `Day 7` 最小目标与验收要求。
+- 当前已经具备进入 `Day 8` 的条件。
+- 现阶段最重要的成果是：
+  - Python 侧已经能把 VLA 动作建议翻译成安全目标位姿
+  - 坐标系、步长限制、工作空间边界三层逻辑已经建立
+
+### 下一步计划
+
+- 进入 `Day 8`：
+  - 明确 C++ 执行桥职责
+  - 让执行层只订阅 `/vla/goal_pose`
+  - 将目标位姿交给 MoveIt 执行
+  - 明确执行成功 / 失败的反馈接口
